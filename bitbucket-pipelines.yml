@@ -1,0 +1,68 @@
+image: node:14.18.2
+
+pipelines:
+  pull-requests:
+    '**':
+      - step:
+          name: Build and test
+          caches:
+            - node
+          script:
+            - npm install
+            - npm run build
+            - npm run test
+  branches:
+    develop:
+      - step:
+          name: Build and test
+          caches:
+            - node
+          script:
+            - npm install
+            - npm run build
+            - npm run test
+      - step:
+          name: Create artifact
+          script:
+            - git archive --format=tar.gz develop -o develop.tar.gz
+          artifacts:
+            - develop.tar.gz
+      - step:
+          name: Deploy dev to heroku
+          deployment: test
+          caches:
+            - node
+          script:
+            - pipe: atlassian/heroku-deploy:1.2.1
+              variables:
+                HEROKU_API_KEY: $HEROKU_API_KEY
+                HEROKU_APP_NAME: $HEROKU_APP_NAME_DEV
+                ZIP_FILE: "develop.tar.gz"
+                WAIT: 'true'
+    main:
+      - step:
+          name: Build and test
+          caches:
+            - node
+          script:
+            - npm install
+            - npm run build
+            - npm run test
+      - step:
+          name: Create artifact
+          script:
+            - git archive --format=tar.gz main -o main.tar.gz
+          artifacts:
+            - main.tar.gz
+      - step:
+          name: Deploy production to heroku
+          deployment: production
+          caches:
+            - node
+          script:
+            - pipe: atlassian/heroku-deploy:1.2.1
+              variables:
+                HEROKU_API_KEY: $HEROKU_API_KEY
+                HEROKU_APP_NAME: $HEROKU_APP_NAME_PROD
+                ZIP_FILE: "main.tar.gz"
+                WAIT: 'true'
